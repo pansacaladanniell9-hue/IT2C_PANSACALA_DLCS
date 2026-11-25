@@ -69,9 +69,9 @@ public class UserDao {
         return list;
     }
 
-    public List<User> getAllPendingUsers() {
+    public List<User> getPendingUsers() {
         List<User> list = new ArrayList<>();
-        String sql = "SELECT * FROM users WHERE status = 'PENDING'";
+        String sql = "SELECT * FROM users WHERE status = 'PENDING' ORDER BY id";
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -88,6 +88,17 @@ public class UserDao {
             System.out.println("Error: " + e.getMessage());
         }
         return list;
+    }
+
+    public boolean approveUser(int userId) {
+        String sql = "UPDATE users SET status = 'APPROVED' WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     public boolean updateStatus(int userId, String newStatus) {

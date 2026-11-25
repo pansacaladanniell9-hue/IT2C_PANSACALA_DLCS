@@ -20,9 +20,9 @@ public class AdminMenu {
             System.out.println("\n==================================================");
             System.out.println("                  ADMIN DASHBOARD                  ");
             System.out.println("==================================================");
-            System.out.println("(1). View All Users");
-            System.out.println("(2). View Pending User Approvals");
-            System.out.println("(3). Approve User Registration");
+            System.out.println("(1). View All System Users");
+            System.out.println("(2). View Pending Registrations");
+            System.out.println("(3). Approve User Account");
             System.out.println("(4). Add New User");
             System.out.println("(5). Update User Role / Status");
             System.out.println("(6). Delete User Account");
@@ -49,49 +49,52 @@ public class AdminMenu {
     }
 
     private void viewAllUsers() {
-        System.out.println("\n--- All Registered Users ---");
+        System.out.println("\n--- All System Users ---");
         List<User> users = userDao.getAllUsers();
         if (users.isEmpty()) {
             System.out.println("No users found.");
             return;
         }
-        printTableHeader();
-        for (User u : users) {
-            printUserRow(u);
-        }
+        printUserTable(users);
     }
 
     private void viewPendingApprovals() {
-        System.out.println("\n--- Pending User Approvals ---");
-        List<User> pending = userDao.getAllPendingUsers();
+        System.out.println("\n--- Pending Registrations ---");
+        List<User> pending = userDao.getPendingUsers();
         if (pending.isEmpty()) {
             System.out.println("✅ No pending accounts.");
             return;
         }
-        printTableHeader();
-        for (User u : pending) {
-            printUserRow(u);
-        }
+        printUserTable(pending);
     }
 
     private void approveUserRegistration() {
-        viewPendingApprovals();
-        System.out.println("\n--- Approve User Registration ---");
-        System.out.print("Enter User ID: ");
+        System.out.println("\n--- Approve User Account ---");
+        List<User> pending = userDao.getPendingUsers();
+        if (pending.isEmpty()) {
+            System.out.println("✅ No pending accounts to approve.");
+            return;
+        }
+        printUserTable(pending);
+
+        System.out.print("Enter Target User ID to approve (or enter 0 to cancel): ");
         try {
             int userId = Integer.parseInt(scanner.nextLine().trim());
-            System.out.print("Enter new status (APPROVED / DEACTIVATED): ");
-            String newStatus = scanner.nextLine().trim().toUpperCase();
-
-            if (!newStatus.equals("APPROVED") && !newStatus.equals("DEACTIVATED")) {
-                System.out.println("❌ Invalid status. Use APPROVED or DEACTIVATED.");
+            if (userId == 0) {
+                System.out.println("↩️ Approval action cancelled.");
                 return;
             }
 
-            if (userDao.updateStatus(userId, newStatus)) {
-                System.out.println("✅ User account updated to: " + newStatus);
+            boolean existsInPending = pending.stream().anyMatch(u -> u.id() == userId);
+            if (!existsInPending) {
+                System.out.println("❌ User ID " + userId + " is not in the pending registrations list.");
+                return;
+            }
+
+            if (userDao.approveUser(userId)) {
+                System.out.println("✅ User ID " + userId + " has been APPROVED.");
             } else {
-                System.out.println("❌ Update failed. User not found.");
+                System.out.println("❌ Approval failed.");
             }
         } catch (NumberFormatException e) {
             System.out.println("❌ Please enter a valid number.");
@@ -181,18 +184,18 @@ public class AdminMenu {
         }
     }
 
-    private void printTableHeader() {
-        System.out.println("--------------------------------------------------");
-        System.out.printf(" %-4s | %-15s | %-10s | %-10s%n",
-                "ID", "USERNAME", "ROLE", "STATUS");
-        System.out.println("--------------------------------------------------");
-    }
-
-    private void printUserRow(User user) {
-        System.out.printf(" %-4d | %-15s | %-10s | %-10s%n",
-                user.id(),
-                user.username(),
-                user.role(),
-                user.status());
+    private void printUserTable(List<User> users) {
+        String border = "--------------------------------------------------";
+        System.out.println(border);
+        System.out.printf("%-5s %-15s %-12s %-10s%n", "ID", "USERNAME", "ROLE", "STATUS");
+        System.out.println(border);
+        for (User user : users) {
+            System.out.printf("%-5d %-15s %-12s %-10s%n",
+                    user.id(),
+                    user.username(),
+                    user.role(),
+                    user.status());
+        }
+        System.out.println(border);
     }
 }
